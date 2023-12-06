@@ -24,6 +24,46 @@ def mapValues(content, values):
     return values
 
 
+def problem1():
+    print("Problem 1: ")
+    input = open("input.txt")
+    content = input.readlines()
+
+    startTime = time.perf_counter()
+    seedsToPlant = content[0].split("\n")[0].split(" ")[1:]
+
+    mapped = []
+    for seed in seedsToPlant:
+        mapped.append(np.array([seed]))
+
+    for lineNumber, line in enumerate(content):
+        if line == "seed-to-soil map:\n":
+            mapped = mapValues(content[lineNumber + 1:], seedsToPlant)
+        if line == "soil-to-fertilizer map:\n":
+            mapped = mapValues(content[lineNumber + 1:], mapped)
+        if line == "fertilizer-to-water map:\n":
+            mapped = mapValues(content[lineNumber + 1:], mapped)
+        if line == "water-to-light map:\n":
+            mapped = mapValues(content[lineNumber + 1:], mapped)
+        if line == "light-to-temperature map:\n":
+            mapped = mapValues(content[lineNumber + 1:], mapped)
+        if line == "temperature-to-humidity map:\n":
+            mapped = mapValues(content[lineNumber + 1:], mapped)
+        if line == "humidity-to-location map:\n":
+            mapped = mapValues(content[lineNumber + 1:], mapped)
+
+    print("Locations: ", min(mapped))
+
+    print("Took:", time.perf_counter() - startTime, "ms")
+
+
+def splitSet(valueStart, valueRange, index):
+    if len(index) == 1:
+        return [(valueStart, index[0]),(valueStart + index[0],valueRange - index[0])]
+
+    returnSet = [(valueStart, index[0]),(valueStart + index[0],index[1]-index[0]), (valueStart + index[1],valueRange - index[1])]
+    return returnSet
+
 def mapValues_new(content, valueSet):
     lines = []
     for line in content:
@@ -35,11 +75,13 @@ def mapValues_new(content, valueSet):
     returnSet = []
     #print("Values to check: ", valueSet)
     for values in valueSet:
+        valueStart = int(values[0])
+        valueRange = int(values[1])
+        maxValue = valueStart + valueRange - 1
 
         for line in lines:
             #print("Checking new line")
-            valueStart = int(values[0])
-            valueRange = len(values)-1
+
 
             sourceStart = int(line[1])
             destinationStart = int(line[0])
@@ -50,96 +92,58 @@ def mapValues_new(content, valueSet):
             edited = False
             # 5 cases
             # case 1: the two sets do not overlap at all
-            if valueStart + valueRange < sourceStart or valueStart > sourceStart + mapLength:
+            if maxValue < sourceStart or valueStart > sourceStart + mapLength:
                 continue
 
             # case 2: source with mapLength covers entire value Range
-            if sourceStart <= valueStart and sourceStart + mapLength >= valueStart + valueRange:
-                returnSet.append(values + offset)
+            if sourceStart <= valueStart and sourceStart + mapLength >= maxValue:
+                returnSet.append((valueStart + offset, valueRange))
                 edited = True
                 break
 
             # case 3 the two sets overlap, the values are lower than the source but enter from the left
-            if valueStart < sourceStart <= valueStart + valueRange and valueStart + valueRange <= sourceStart + mapLength:
-                for index, value in enumerate(values):
-                    if value == sourceStart:
+            if valueStart < sourceStart <= maxValue and maxValue <= sourceStart + mapLength:
+                index = sourceStart - valueStart
 
-                        uneditedSet = [values[:index]]
-                        editedSet = mapValues_new(content, uneditedSet)
-                        for set in editedSet:
-                            returnSet.append(set)
-                        returnSet.append(values[index:] + offset)
-                        edited = True
-                        break
+                split = splitSet(valueStart, valueRange, [index])
+                editedSet = mapValues_new(content, split)
+                for set in editedSet:
+                    returnSet.append(set)
+
+                edited = True
                 break
 
             # case 4 the two sets overlap, the values are inside the source but exit from the right
-            if valueStart >= sourceStart and valueStart < sourceStart + mapLength and valueStart + valueRange > sourceStart + mapLength:
-                for index, value in enumerate(values):
-                    if value == sourceStart + mapLength:
+            if valueStart >= sourceStart and valueStart < sourceStart + mapLength and maxValue > sourceStart + mapLength:
+                index = sourceStart + mapLength - valueStart + 1
 
-                        uneditedSet = [values[index:]]
-                        editedSet = mapValues_new(content, uneditedSet)
-                        for set in editedSet:
-                            returnSet.append(set)
-                        returnSet.append(values[:index+1] + offset)
-                        edited = True
-                        break
+                split = splitSet(valueStart, valueRange, [index])
+                editedSet = mapValues_new(content, split)
+                for set in editedSet:
+                    returnSet.append(set)
+
+                edited = True
                 break
 
             # case 5 the value set covers the entire source range
-            if valueStart < sourceStart and valueStart + valueRange > sourceStart + mapLength:
-                lowerIndex = 0
+            if valueStart < sourceStart and maxValue > sourceStart + mapLength:
 
-                for index, value in enumerate(values):
-                    if value == sourceStart:
-                        lowerIndex = index
-                        break
-                upperindex = lowerIndex + mapLength
-                uneditedSet = [values[:lowerIndex], values[upperindex:]]
-                editedSet = mapValues_new(content, uneditedSet)
+                lowerIndex = sourceStart - valueStart
+                upperIndex = sourceStart + mapLength - valueStart + 1
+
+                split = splitSet(valueStart, valueRange, (lowerIndex,upperIndex))
+                editedSet = mapValues_new(content, split)
                 for set in editedSet:
                     returnSet.append(set)
-                returnSet.append(values[lowerIndex:upperindex + 1] + offset)
+
                 edited = True
-                pass
+                break
+
+       
         if edited == False:
-            returnSet.append(values)
+            returnSet.append((valueStart, valueRange))
 
     return returnSet
-
-
-def problem1():
-    print("Problem 1: ")
-    input = open("input.txt")
-    content = input.readlines()
-
-    startTime = time.perf_counter()
-    seedsToPlant = content[0].split("\n")[0].split(" ")[1:]
-    seedsToPlant = list(map(int, seedsToPlant))
-    mapped = []
-    for seed in seedsToPlant:
-        mapped.append(np.array([seed]))
-
-    for lineNumber, line in enumerate(content):
-        if line == "seed-to-soil map:\n":
-            mapped = mapValues_new(content[lineNumber + 1:], mapped)
-        if line == "soil-to-fertilizer map:\n":
-            mapped = mapValues_new(content[lineNumber + 1:], mapped)
-        if line == "fertilizer-to-water map:\n":
-            mapped = mapValues_new(content[lineNumber + 1:], mapped)
-        if line == "water-to-light map:\n":
-            mapped = mapValues_new(content[lineNumber + 1:], mapped)
-        if line == "light-to-temperature map:\n":
-            mapped = mapValues_new(content[lineNumber + 1:], mapped)
-        if line == "temperature-to-humidity map:\n":
-            mapped = mapValues_new(content[lineNumber + 1:], mapped)
-        if line == "humidity-to-location map:\n":
-            mapped = mapValues_new(content[lineNumber + 1:], mapped)
-
-    print("Locations: ", min(mapped))
-
-    print("Took:", time.perf_counter() - startTime, "ms")
 
 
 def has_numbers(inputString):
@@ -163,35 +167,29 @@ def problem2():
     startingPoints = seedsToPlant[0::2]
     ranges = seedsToPlant[1::2]
 
-    # print(startingPoints)
-    # print(ranges)
-    # completeRange = 0
-    # for num in ranges:
-    #    completeRange += int(num)
-    # print(completeRange)
+    startRangePairs = []
+    for i in range(len(startingPoints)):
+        startRangePairs.append((startingPoints[i], ranges[i]))
 
     minLocation = sys.maxsize
-    for index, startingPoint in enumerate(startingPoints):
-        mapped = [np.arange(int(startingPoint), int(ranges[index]) + int(startingPoint), 1, dtype=np.int64)]
 
-        print("Checking", index + 1, "starting point")
 
-        for lineNumber, line in enumerate(content):
-            if has_numbers(line) or line == "\n":
-                continue
-            elif line == "humidity-to-location map:\n":
-                # print("Mapping to location")
-                mapped = mapValues_new(content[lineNumber + 1:], mapped)
-                for set in mapped:
-                    if min(set) < minLocation:
-                        minLocation = min(set)
-                break
+    for lineNumber, line in enumerate(content):
+        if has_numbers(line) or line == "\n":
+            continue
+        elif line == "humidity-to-location map:\n":
+            # print("Mapping to location")
+            startRangePairs = mapValues_new(content[lineNumber + 1:], startRangePairs)
+            for location in startRangePairs:
+                if location[0] < minLocation:
+                    minLocation = location[0]
+            break
 
-            else:
-                lineEndIndex = getNextLineEnd(content[lineNumber + 1:])
-                mapped = mapValues_new(content[lineNumber + 1:lineNumber + lineEndIndex + 1], mapped)
+        else:
+            lineEndIndex = getNextLineEnd(content[lineNumber + 1:])
+            startRangePairs = mapValues_new(content[lineNumber + 1:lineNumber + lineEndIndex + 1], startRangePairs)
 
-                continue
+            continue
 
     print("Locations: ", minLocation)
     print("Took:", time.perf_counter() - startTime, "ms")
