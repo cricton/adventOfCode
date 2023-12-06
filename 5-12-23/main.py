@@ -61,7 +61,9 @@ def splitSet(valueStart, valueRange, index):
     if len(index) == 1:
         return [(valueStart, index[0]),(valueStart + index[0],valueRange - index[0])]
 
-    returnSet = [(valueStart, index[0]),(valueStart + index[0],index[1]-index[0]), (valueStart + index[1],valueRange - index[1])]
+    returnSet = [(valueStart, index[0]),
+                 (valueStart + index[0],index[1]-index[0]),
+                 (valueStart + index[1],valueRange - index[1])]
     return returnSet
 
 def mapValues_new(content, valueSet):
@@ -79,6 +81,8 @@ def mapValues_new(content, valueSet):
         valueRange = int(values[1])
         maxValue = valueStart + valueRange - 1
 
+        edited = False
+        split = ()
         for line in lines:
             #print("Checking new line")
 
@@ -89,7 +93,6 @@ def mapValues_new(content, valueSet):
 
             offset = destinationStart - sourceStart
 
-            edited = False
             # 5 cases
             # case 1: the two sets do not overlap at all
             if maxValue < sourceStart or valueStart > sourceStart + mapLength:
@@ -103,26 +106,16 @@ def mapValues_new(content, valueSet):
 
             # case 3 the two sets overlap, the values are lower than the source but enter from the left
             if valueStart < sourceStart <= maxValue and maxValue <= sourceStart + mapLength:
+
                 index = sourceStart - valueStart
-
                 split = splitSet(valueStart, valueRange, [index])
-                editedSet = mapValues_new(content, split)
-                for set in editedSet:
-                    returnSet.append(set)
-
-                edited = True
                 break
 
             # case 4 the two sets overlap, the values are inside the source but exit from the right
             if valueStart >= sourceStart and valueStart < sourceStart + mapLength and maxValue > sourceStart + mapLength:
+
                 index = sourceStart + mapLength - valueStart + 1
-
                 split = splitSet(valueStart, valueRange, [index])
-                editedSet = mapValues_new(content, split)
-                for set in editedSet:
-                    returnSet.append(set)
-
-                edited = True
                 break
 
             # case 5 the value set covers the entire source range
@@ -130,17 +123,15 @@ def mapValues_new(content, valueSet):
 
                 lowerIndex = sourceStart - valueStart
                 upperIndex = sourceStart + mapLength - valueStart + 1
-
                 split = splitSet(valueStart, valueRange, (lowerIndex,upperIndex))
-                editedSet = mapValues_new(content, split)
-                for set in editedSet:
-                    returnSet.append(set)
-
-                edited = True
                 break
 
-       
-        if edited == False:
+        if len(split) > 0:
+            editedSet = mapValues_new(content, split)
+            for set in editedSet:
+                returnSet.append(set)
+
+        elif not edited:
             returnSet.append((valueStart, valueRange))
 
     return returnSet
