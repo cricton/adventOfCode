@@ -285,13 +285,8 @@ def rotateOffset(offset, direction):
     return offset
 
 
-expandedPipe = False
-
 
 def expandPipe(coordinates, pipeMap):
-    global expandedPipe
-    if expandedPipe:
-        return pipeMap
 
     symbol = pipeMap[coordinates[0]][coordinates[1]]
 
@@ -338,7 +333,6 @@ def expandPipe(coordinates, pipeMap):
         lastCoords = currentCoords
         currentCoords = temp
 
-    expandedPipe = True
     return pipeMap
 
 
@@ -346,17 +340,10 @@ def expandPoint(coordinates, pipeMap):
     upCoord = (max(coordinates[0] - 1, 0), coordinates[1])
     if pipeMap[upCoord[0]][upCoord[1]] == '.':
         pipeMap[upCoord[0]][upCoord[1]] = 't'
-        # pipeMap = expandPoint(upCoord, pipeMap)
-
-    if pipeMap[upCoord[0]][upCoord[1]] == 'J' or pipeMap[upCoord[0]][upCoord[1]] == 'L':
-        pipeMap = expandPipe(upCoord, pipeMap)
 
     downCoord = (min(coordinates[0] + 1, len(pipeMap) - 1), coordinates[1])
     if pipeMap[downCoord[0]][downCoord[1]] == '.':
         pipeMap[downCoord[0]][downCoord[1]] = 't'
-
-    if pipeMap[downCoord[0]][downCoord[1]] == '7' or pipeMap[downCoord[0]][downCoord[1]] == 'F':
-        pipeMap = expandPipe(downCoord, pipeMap)
 
     righCoord = (coordinates[0], min(coordinates[1] + 1, len(pipeMap[0]) - 1))
     if pipeMap[righCoord[0]][righCoord[1]] == '.':
@@ -385,6 +372,16 @@ def problem2():
     startTime = t.perf_counter()
 
     maze = sanitizeMap(content)
+
+    checkedInnerArea = False
+    for x in range(len(maze)):
+        if checkedInnerArea:
+            break
+        for y in range(len(maze[x])):
+            if maze[x][y] == 'F':
+                maze = expandPipe((x, y), maze)
+                checkedInnerArea = True
+                break
 
     for index, expansionPoint in enumerate(maze[0]):
         if expandable(expansionPoint):
